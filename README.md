@@ -1,68 +1,82 @@
-# SimpleAudioStream
+<div align="center">
 
-A tiny Android app that streams whatever your phone is playing (YouTube Music, Spotify, podcasts, …) to a Sonos speaker or any other UPnP/DLNA renderer. You don't need the Sonos app, and there is **no time limit**.
+<img src="docs/assets/icon.svg" width="104" alt="SpeakerCast icon">
 
-It is a minimal, open-source alternative to the *Audio Cast* feature of BubbleUPnP. The free version of BubbleUPnP stops the stream after about 15 minutes.
+# SpeakerCast
 
-## Usage
+**Your phone's sound, on your Wi‑Fi speaker.**<br>
+One tap. No time limit. No speaker app needed.
 
-1. Install the APK from the [latest release](../../releases/latest).
-2. Open the app once, grant the permissions and tap your speaker in the list.
-3. Add the **Audio cast** tile to Quick Settings (pull down twice → edit ✏️ → drag the tile in).
-4. Play music in any app, then tap the tile. Android asks *"Start recording or casting?"*. Tap **Start**.
-5. Tap the tile again to stop.
+<br>
 
-The tile always casts to the last speaker you picked. Long-press the tile to open the app and pick a different one.
+<a href="../../releases/latest"><img src="https://img.shields.io/github/v/release/danielseisenbacher/SpeakerCast?style=for-the-badge&label=Download&color=6D4AFF" alt="Download"></a>
+<img src="https://img.shields.io/badge/Android-10%2B-1F1D2B?style=for-the-badge&logo=android&logoColor=white" alt="Android 10+">
+<img src="https://img.shields.io/badge/License-MIT-1F1D2B?style=for-the-badge" alt="MIT License">
 
-While casting:
-- The phone's own speaker is silenced: its media volume is set to 0. It is restored when you stop casting.
-- The phone's **volume keys** control the speaker volume. The notification also has *Vol −/+* buttons.
-- If the speaker drops the stream (for example after a Wi-Fi hiccup), the app **restarts it automatically** within about 10 seconds.
-- If you switch the speaker to another source in the Sonos app, the app stops casting.
+<br><br>
 
-**Casting a single app:** in the app, set **Audio from** to one app (for example YouTube Music). Then only that app's sound is cast, and sounds from other apps are left out. Android's sharing dialog always shares the *entire screen*. The dialog only grants the app permission to capture audio, and the app never records the screen image. Android's own "single app" sharing mode is turned off because Android delivers no audio in that mode.
+<img src="docs/assets/screens.png" width="640" alt="SpeakerCast: pick a speaker, tap once, and your phone's audio plays on it">
 
-## How it works
+</div>
 
-The same approach as BubbleUPnP's Audio Cast:
+<br>
 
-```
-Other apps' audio ──► AudioPlaybackCapture (needs MediaProjection = the "screen cast" consent)
-                  ──► 44.1 kHz / 16-bit stereo PCM
-                  ──► tiny HTTP server on the phone:  http://<phone-ip>:<port>/stream.wav
-Speaker  ◄── UPnP AVTransport SetAVTransportURI + Play (SOAP) ── the app
-Speaker  ──► HTTP GET /stream.wav  (endless WAV stream)
-```
+Play anything on your phone (YouTube Music, Spotify, podcasts, videos) and hear it on your **Sonos** or any other **UPnP/DLNA** speaker. It's a small, free alternative to *Audio Cast* in BubbleUPnP, without the 15‑minute limit.
 
-- **Discovery:** SSDP M-SEARCH for `MediaRenderer:1` and `ZonePlayer:1`.
-- **Control:** plain SOAP calls (`SetAVTransportURI`, `Play`, `Stop`, `GetTransportInfo`, `GetMediaInfo`, `Get/SetVolume`). The app has no UPnP library dependency.
-- **Staying alive:** a foreground service (type `mediaProjection`) with a partial wake lock and Wi-Fi locks. If your phone vendor kills background apps aggressively, tap *Allow running in background* in the app.
+<table>
+<tr>
+<td width="50%" valign="top">
 
-## Limitations
+**⚡ One tap**<br>
+<sub>The Quick Settings tile casts straight to your last speaker.</sub>
 
-- **Two taps on Android 14+.** Android shows the capture consent dialog every time a capture session starts. No app can skip it.
-- **Not every app can be captured.** Apps can opt out of playback capture (some DRM-protected video apps do). YouTube Music, Spotify and most music players allow it.
-- **Delay of about 1 second.** Sonos needs a small buffer, so the speaker plays slightly behind the phone. It's fine for music, but not for lip-synced video. Starting a cast can take up to about 10 seconds, because Sonos probes a new stream before it starts playing.
-- **Grouped Sonos speakers:** cast to the group coordinator.
+</td>
+<td width="50%" valign="top">
 
-## Problems? Send a log
+**∞ No time limit**<br>
+<sub>Streams until you stop it, with the screen off too.</sub>
 
-Open the app, tap the **⋮** menu in the top-right corner and choose **Share log**. This creates a text file containing:
-- the phone model and Android version
-- the selected speaker
-- the app's own log, which keeps the last ~1 MB across restarts and records crashes
-- the app's system log lines
+</td>
+</tr>
+<tr>
+<td valign="top">
 
-Attach that file to a [GitHub issue](../../issues), or send it however you prefer. The log contains no personal data beyond your speaker's name and its local IP address.
+**🔊 Volume keys**<br>
+<sub>Control the speaker's volume from your phone, even when it's locked.</sub>
 
-## Building
+</td>
+<td valign="top">
 
-Every push is built by GitHub Actions (`.github/workflows/build.yml`), and tags `v*` publish a release with the APK. To build locally you need the Android SDK:
+**↻ Reconnects by itself**<br>
+<sub>A Wi‑Fi hiccup? Playback resumes automatically.</sub>
 
-```
-./gradlew assembleDebug
-```
+</td>
+</tr>
+</table>
 
-## License
+## Get started
 
-MIT
+1. **Install** the APK from the [latest release](../../releases/latest).
+2. **Open SpeakerCast** and pick your speaker.
+3. **Add the tile:** pull down Quick Settings, tap ✏️ and drag *SpeakerCast* in.
+4. **Play something**, tap the tile and confirm. That's it.
+
+Tap the tile again to stop. Long‑press it to switch speakers.
+
+## Good to know
+
+- Phone and speaker must be on the **same Wi‑Fi**.
+- Android asks for permission **each time** you start. It's the system's screen‑sharing prompt. SpeakerCast only uses the audio.
+- The phone goes **quiet** while casting. Turn it up any time if you want both.
+- About **half a second of delay**: great for music, less so for lip‑synced video.
+
+Something not working? Tap **⋮ → Share log** in the app and attach the file to an [issue](../../issues).
+
+<br>
+
+<div align="center">
+<sub>
+<a href="docs/HOW-IT-WORKS.md">How it works</a> · <a href="LICENSE">MIT License</a><br>
+Not affiliated with Sonos, Inc.
+</sub>
+</div>
