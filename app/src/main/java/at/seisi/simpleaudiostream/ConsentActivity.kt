@@ -40,10 +40,10 @@ class ConsentActivity : ComponentActivity() {
         }
         if (savedInstanceState == null) {
             val manager = getSystemService(MediaProjectionManager::class.java)
-            // Which audio is cast is decided by the app's "Audio from" setting; the user may share
-            // a single app or the entire screen here, it makes no difference to the audio.
+            // Entire screen only: with single-app sharing Android delivers no playback audio at all
+            // (verified on a Pixel 7). Casting just one app is done with the "Audio from" setting.
             val intent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                manager.createScreenCaptureIntent(MediaProjectionConfig.createConfigForUserChoice())
+                manager.createScreenCaptureIntent(MediaProjectionConfig.createConfigForDefaultDisplay())
             } else {
                 manager.createScreenCaptureIntent()
             }

@@ -20,7 +20,7 @@ While casting:
 - If the speaker drops the stream (for example after a Wi-Fi hiccup), the app **restarts it automatically** within about 10 seconds.
 - If you switch the speaker to another source in the Sonos app, the app stops casting.
 
-**Casting a single app:** in the app, set **Audio from** to one app (for example YouTube Music). Then only that app's sound is cast, and sounds from other apps are left out. In Android's sharing dialog you can choose *a single app* or *the entire screen*. Neither choice changes which audio is cast; the app's **Audio from** setting decides that.
+**Casting a single app:** in the app, set **Audio from** to one app (for example YouTube Music). Then only that app's sound is cast, and sounds from other apps are left out. Android's sharing dialog always shares the *entire screen*. The dialog only grants the app permission to capture audio, and the app never records the screen image. Android's own "single app" sharing mode is turned off because Android delivers no audio in that mode.
 
 ## How it works
 
