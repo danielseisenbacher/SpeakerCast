@@ -75,8 +75,6 @@ class StreamServer {
 
                 out.write(responseHeaders().toByteArray())
                 out.write(WavFormat.streamingHeader())
-                // A small head start so the speaker doesn't have to wait for real-time audio to trickle in.
-                out.write(ByteArray(PRIME_BYTES))
                 out.flush()
                 current.pump()
                 AppLog.i(TAG, "Stream to ${socket.inetAddress.hostAddress} ended")
@@ -97,13 +95,26 @@ class StreamServer {
 
         fun pump() {
             val out = socket.getOutputStream()
+            val start = System.nanoTime()
+            var sent = 0L
             try {
                 while (!closed) {
-                    // Keep the stream alive with silence while nothing is being captured,
-                    // otherwise the speaker treats the stall as end of stream.
-                    val chunk = queue.poll(SILENCE_AFTER_MS, TimeUnit.MILLISECONDS) ?: SILENCE
-                    out.write(chunk)
-                    out.flush()
+                    val chunk = queue.poll(SILENCE_AFTER_MS, TimeUnit.MILLISECONDS)
+                    if (chunk != null) {
+                        out.write(chunk)
+                        out.flush()
+                        sent += chunk.size
+                        continue
+                    }
+                    // Nothing captured: keep the stream alive with silence, otherwise the speaker treats
+                    // the stall as end of stream. Only fill up to real time, so the padding never turns
+                    // into extra latency once audio resumes.
+                    val due = silenceDue(System.nanoTime() - start, sent)
+                    if (due > 0) {
+                        out.write(ByteArray(due))
+                        out.flush()
+                        sent += due
+                    }
                 }
             } finally {
                 listeners.remove(this)
@@ -124,8 +135,14 @@ class StreamServer {
         private const val QUEUE_CHUNKS = 50 // 2 s
         private const val MAX_LISTENERS = 4
         private const val SILENCE_AFTER_MS = 200L
-        private const val PRIME_BYTES = WavFormat.BYTES_PER_SECOND // 1 s
-        private val SILENCE = ByteArray(WavFormat.BYTES_PER_SECOND / 5) // 200 ms
+
+        /** Bytes of silence needed to bring the stream back up to real time (frame-aligned, never negative). */
+        fun silenceDue(elapsedNanos: Long, sentBytes: Long): Int {
+            val expected = elapsedNanos * WavFormat.BYTES_PER_SECOND / 1_000_000_000L
+            val due = expected - sentBytes
+            if (due <= 0) return 0
+            return (minOf(due, WavFormat.BYTES_PER_SECOND.toLong()) / WavFormat.BYTES_PER_FRAME * WavFormat.BYTES_PER_FRAME).toInt()
+        }
 
         fun responseHeaders(): String =
             "HTTP/1.1 200 OK\r\n" +

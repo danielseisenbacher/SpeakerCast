@@ -40,9 +40,10 @@ class ConsentActivity : ComponentActivity() {
         }
         if (savedInstanceState == null) {
             val manager = getSystemService(MediaProjectionManager::class.java)
+            // Which audio is cast is decided by the app's "Audio from" setting; the user may share
+            // a single app or the entire screen here, it makes no difference to the audio.
             val intent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                // Entire screen only: single-app sharing would only capture that one app's audio.
-                manager.createScreenCaptureIntent(MediaProjectionConfig.createConfigForDefaultDisplay())
+                manager.createScreenCaptureIntent(MediaProjectionConfig.createConfigForUserChoice())
             } else {
                 manager.createScreenCaptureIntent()
             }

@@ -15,9 +15,12 @@ It is a minimal, open-source alternative to the *Audio Cast* feature of BubbleUP
 The tile always casts to the last speaker you picked. Long-press the tile to open the app and pick a different one.
 
 While casting:
+- The phone's own speaker is silenced: its media volume is set to 0. It is restored when you stop casting.
 - The phone's **volume keys** control the speaker volume. The notification also has *Vol −/+* buttons.
 - If the speaker drops the stream (for example after a Wi-Fi hiccup), the app **restarts it automatically** within about 10 seconds.
 - If you switch the speaker to another source in the Sonos app, the app stops casting.
+
+**Casting a single app:** in the app, set **Audio from** to one app (for example YouTube Music). Then only that app's sound is cast, and sounds from other apps are left out. In Android's sharing dialog you can choose *a single app* or *the entire screen*. Neither choice changes which audio is cast; the app's **Audio from** setting decides that.
 
 ## How it works
 
@@ -39,13 +42,12 @@ Speaker  ──► HTTP GET /stream.wav  (endless WAV stream)
 
 - **Two taps on Android 14+.** Android shows the capture consent dialog every time a capture session starts. No app can skip it.
 - **Not every app can be captured.** Apps can opt out of playback capture (some DRM-protected video apps do). YouTube Music, Spotify and most music players allow it.
-- **About 2–5 seconds of delay.** Sonos buffers HTTP streams, so expect this latency. It's fine for music, but not for video.
-- **The phone keeps playing.** Android doesn't mute the phone while capturing. You can enable *Mute phone while casting*. If the speaker goes silent with that switch on, your device mutes the captured audio as well, so turn the switch off and lower the phone volume instead.
+- **Delay of about 1 second.** Sonos needs a small buffer, so the speaker plays slightly behind the phone. It's fine for music, but not for lip-synced video. Starting a cast can take up to about 10 seconds, because Sonos probes a new stream before it starts playing.
 - **Grouped Sonos speakers:** cast to the group coordinator.
 
 ## Problems? Send a log
 
-Open the app and tap **Share log for troubleshooting** at the bottom. This creates a text file containing:
+Open the app, tap the **⋮** menu in the top-right corner and choose **Share log**. This creates a text file containing:
 - the phone model and Android version
 - the selected speaker
 - the app's own log, which keeps the last ~1 MB across restarts and records crashes

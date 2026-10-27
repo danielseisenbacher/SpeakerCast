@@ -34,9 +34,10 @@ class Prefs(context: Context) {
             }
         }
 
-    var mutePhone: Boolean
-        get() = prefs.getBoolean(KEY_MUTE_PHONE, false)
-        set(value) = prefs.edit { putBoolean(KEY_MUTE_PHONE, value) }
+    /** Package whose audio is cast, or null for all apps. */
+    var captureApp: String?
+        get() = prefs.getString(KEY_CAPTURE_APP, null)
+        set(value) = prefs.edit { putString(KEY_CAPTURE_APP, value) }
 
     private companion object {
         const val KEY_UDN = "renderer_udn"
@@ -45,6 +46,6 @@ class Prefs(context: Context) {
         const val KEY_LOCATION = "renderer_location"
         const val KEY_AV_TRANSPORT = "renderer_av_transport"
         const val KEY_RENDERING_CONTROL = "renderer_rendering_control"
-        const val KEY_MUTE_PHONE = "mute_phone"
+        const val KEY_CAPTURE_APP = "capture_app"
     }
 }

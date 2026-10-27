@@ -17,11 +17,13 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -33,7 +35,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
-import androidx.compose.material3.Switch
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.darkColorScheme
@@ -58,7 +66,9 @@ import androidx.core.content.ContextCompat
 import at.seisi.simpleaudiostream.log.LogExport
 import at.seisi.simpleaudiostream.upnp.Renderer
 import at.seisi.simpleaudiostream.upnp.SsdpDiscovery
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 
 class MainActivity : ComponentActivity() {
@@ -109,7 +119,9 @@ private fun MainScreen() {
     var selected by remember { mutableStateOf(prefs.renderer) }
     var renderers by remember { mutableStateOf(emptyList<Renderer>()) }
     var scanning by remember { mutableStateOf(false) }
-    var mutePhone by remember { mutableStateOf(prefs.mutePhone) }
+    var captureApp by remember { mutableStateOf(prefs.captureApp) }
+    var pickingApp by remember { mutableStateOf(false) }
+    var menuOpen by remember { mutableStateOf(false) }
     var batteryRestricted by remember { mutableStateOf(!isIgnoringBatteryOptimizations(context)) }
 
     fun select(renderer: Renderer) {
@@ -137,7 +149,27 @@ private fun MainScreen() {
             modifier = Modifier.padding(padding).padding(16.dp).fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text(stringResource(R.string.app_name), style = MaterialTheme.typography.headlineMedium)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    stringResource(R.string.app_name),
+                    style = MaterialTheme.typography.headlineMedium,
+                    modifier = Modifier.weight(1f),
+                )
+                Box {
+                    IconButton(onClick = { menuOpen = true }) {
+                        Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.more))
+                    }
+                    DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.share_log)) },
+                            onClick = {
+                                menuOpen = false
+                                scope.launch { LogExport.share(context) }
+                            },
+                        )
+                    }
+                }
+            }
             Text(
                 text = when (val s = status) {
                     CastState.Status.Idle -> stringResource(R.string.status_idle)
@@ -184,13 +216,21 @@ private fun MainScreen() {
             }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(stringResource(R.string.mute_phone), modifier = Modifier.weight(1f))
-                Switch(
-                    checked = mutePhone,
-                    onCheckedChange = {
-                        mutePhone = it
-                        prefs.mutePhone = it
+                Text(stringResource(R.string.audio_from), modifier = Modifier.weight(1f))
+                TextButton(onClick = { pickingApp = true }) {
+                    Text(captureApp?.let { appLabel(context, it) } ?: stringResource(R.string.all_apps))
+                }
+            }
+
+            if (pickingApp) {
+                AppPickerDialog(
+                    selected = captureApp,
+                    onPick = { pkg ->
+                        prefs.captureApp = pkg
+                        captureApp = pkg
+                        pickingApp = false
                     },
+                    onDismiss = { pickingApp = false },
                 )
             }
 
@@ -228,14 +268,74 @@ private fun MainScreen() {
                     )
                 }
             }
-
-            TextButton(
-                onClick = { scope.launch { LogExport.share(context) } },
-                modifier = Modifier.align(Alignment.CenterHorizontally),
-            ) { Text(stringResource(R.string.share_log)) }
         }
     }
 }
+
+private data class AppEntry(val packageName: String, val label: String)
+
+/** Lets the user cast only one app's audio (e.g. YouTube Music) instead of everything the phone plays. */
+@Composable
+private fun AppPickerDialog(selected: String?, onPick: (String?) -> Unit, onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    var apps by remember { mutableStateOf<List<AppEntry>?>(null) }
+    LaunchedEffect(Unit) { apps = withContext(Dispatchers.IO) { launchableApps(context) } }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {},
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(android.R.string.cancel)) } },
+        title = { Text(stringResource(R.string.audio_from)) },
+        text = {
+            Column {
+                Text(
+                    stringResource(R.string.audio_from_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                val list = apps
+                if (list == null) {
+                    CircularProgressIndicator(modifier = Modifier.padding(16.dp).size(24.dp), strokeWidth = 2.dp)
+                } else {
+                    LazyColumn(modifier = Modifier.heightIn(max = 400.dp)) {
+                        item { AppRow(stringResource(R.string.all_apps), selected == null) { onPick(null) } }
+                        items(list, key = { it.packageName }) { app ->
+                            AppRow(app.label, app.packageName == selected) { onPick(app.packageName) }
+                        }
+                    }
+                }
+            }
+        },
+    )
+}
+
+@Composable
+private fun AppRow(label: String, checked: Boolean, onClick: () -> Unit) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 4.dp),
+    ) {
+        RadioButton(selected = checked, onClick = null)
+        Text(label, modifier = Modifier.padding(start = 12.dp))
+    }
+}
+
+private fun launchableApps(context: Context): List<AppEntry> {
+    val pm = context.packageManager
+    val launcher = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+    return pm.queryIntentActivities(launcher, 0)
+        .map { it.activityInfo.applicationInfo }
+        .filter { it.packageName != context.packageName }
+        .distinctBy { it.packageName }
+        .map { AppEntry(it.packageName, pm.getApplicationLabel(it).toString()) }
+        .sortedBy { it.label.lowercase() }
+}
+
+private fun appLabel(context: Context, packageName: String): String =
+    runCatching {
+        val pm = context.packageManager
+        pm.getApplicationLabel(pm.getApplicationInfo(packageName, 0)).toString()
+    }.getOrDefault(packageName)
 
 private fun isIgnoringBatteryOptimizations(context: Context): Boolean =
     context.getSystemService(PowerManager::class.java).isIgnoringBatteryOptimizations(context.packageName)

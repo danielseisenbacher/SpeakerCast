@@ -27,6 +27,17 @@ class StreamServerTest {
     }
 
     @Test
+    fun silenceOnlyFillsUpToRealTime() {
+        val second = 1_000_000_000L
+        assertEquals(0, StreamServer.silenceDue(second, WavFormat.BYTES_PER_SECOND.toLong()))
+        assertEquals(0, StreamServer.silenceDue(second, 2L * WavFormat.BYTES_PER_SECOND))
+        assertEquals(WavFormat.BYTES_PER_SECOND / 2, StreamServer.silenceDue(second, WavFormat.BYTES_PER_SECOND / 2L))
+        assertEquals(0, StreamServer.silenceDue(second / 3, 0) % WavFormat.BYTES_PER_FRAME)
+        // Never more than one second at once.
+        assertEquals(WavFormat.BYTES_PER_SECOND, StreamServer.silenceDue(10 * second, 0))
+    }
+
+    @Test
     fun parsesRequests() {
         val request = StreamServer.readRequest(
             "GET /stream.wav?session=3 HTTP/1.1\r\nHost: x\r\nIcy-MetaData: 1\r\n\r\n".byteInputStream(),
