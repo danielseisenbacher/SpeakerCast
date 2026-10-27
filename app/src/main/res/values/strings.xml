@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">SimpleAudioStream</string>
+    <string name="tile_label">Audio cast</string>
+    <string name="tile_idle">Tap to cast</string>
+    <string name="tile_connecting">Connecting…</string>
+    <string name="tile_casting">Casting</string>
+    <string name="tile_no_speaker">Pick a speaker</string>
+
+    <string name="channel_name">Casting</string>
+    <string name="notification_connecting">Connecting to %1$s…</string>
+    <string name="notification_casting">Casting to %1$s</string>
+    <string name="notification_reconnecting">Reconnecting to %1$s…</string>
+    <string name="action_stop">Stop</string>
+    <string name="action_volume_down">Vol −</string>
+    <string name="action_volume_up">Vol +</string>
+
+    <string name="status_idle">Not casting</string>
+    <string name="status_connecting">Connecting to %1$s…</string>
+    <string name="status_casting">Casting to %1$s</string>
+    <string name="status_error">Error: %1$s</string>
+    <string name="button_cast">Cast to %1$s</string>
+    <string name="button_pick_speaker">Pick a speaker below</string>
+    <string name="button_stop">Stop casting</string>
+    <string name="volume">Speaker volume: %1$d</string>
+    <string name="speakers">Speakers</string>
+    <string name="refresh">Refresh</string>
+    <string name="no_speakers">No speakers found. Is the phone on the same Wi-Fi?</string>
+    <string name="mute_phone">Mute phone while casting</string>
+    <string name="battery_hint">Allow running in background</string>
+
+    <string name="error_permission">Microphone/audio capture permission is required</string>
+    <string name="error_not_found">%1$s not found on the network</string>
+    <string name="error_projection">Screen/audio capture was not granted</string>
+</resources>
