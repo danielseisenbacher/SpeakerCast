@@ -20,14 +20,20 @@ object Soap {
             append("</u:$action></s:Body></s:Envelope>")
         }
 
-    fun call(controlUrl: String, serviceType: String, action: String, vararg args: Pair<String, String>): String {
+    fun call(
+        controlUrl: String,
+        serviceType: String,
+        action: String,
+        vararg args: Pair<String, String>,
+        readTimeoutMs: Int = 6000,
+    ): String {
         val body = envelope(serviceType, action, args.toList()).toByteArray(Charsets.UTF_8)
         // The watchdog polls these every few seconds; don't flood the log with them.
         if (action !in QUIET_ACTIONS) AppLog.i("Soap", "$action ${args.joinToString { "${it.first}=${it.second.take(120)}" }}")
         val conn = URL(controlUrl).openConnection() as HttpURLConnection
         try {
             conn.connectTimeout = 4000
-            conn.readTimeout = 6000
+            conn.readTimeout = readTimeoutMs
             conn.requestMethod = "POST"
             conn.doOutput = true
             conn.setRequestProperty("Content-Type", "text/xml; charset=\"utf-8\"")

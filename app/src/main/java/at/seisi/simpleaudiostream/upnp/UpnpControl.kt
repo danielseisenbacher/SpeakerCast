@@ -7,11 +7,15 @@ import at.seisi.simpleaudiostream.upnp.DeviceDescription.RENDERING_CONTROL
 class UpnpControl(val renderer: Renderer) {
 
     fun setAvTransportUri(uri: String, metadata: String) {
-        avTransport("SetAVTransportURI", "InstanceID" to "0", "CurrentURI" to uri, "CurrentURIMetaData" to metadata)
+        avTransport(
+            "SetAVTransportURI", "InstanceID" to "0", "CurrentURI" to uri, "CurrentURIMetaData" to metadata,
+            readTimeoutMs = SLOW_TIMEOUT_MS,
+        )
     }
 
     fun play() {
-        avTransport("Play", "InstanceID" to "0", "Speed" to "1")
+        // Sonos replies to Play only after it has buffered the stream.
+        avTransport("Play", "InstanceID" to "0", "Speed" to "1", readTimeoutMs = SLOW_TIMEOUT_MS)
     }
 
     fun stop() {
@@ -39,10 +43,12 @@ class UpnpControl(val renderer: Renderer) {
         )
     }
 
-    private fun avTransport(action: String, vararg args: Pair<String, String>): String =
-        Soap.call(renderer.avTransportUrl, AV_TRANSPORT, action, *args)
+    private fun avTransport(action: String, vararg args: Pair<String, String>, readTimeoutMs: Int = 6000): String =
+        Soap.call(renderer.avTransportUrl, AV_TRANSPORT, action, *args, readTimeoutMs = readTimeoutMs)
 
     companion object {
+        private const val SLOW_TIMEOUT_MS = 20_000
+
         /** DIDL-Lite metadata describing our live stream. */
         fun streamMetadata(url: String, mimeType: String, title: String): String =
             "<DIDL-Lite xmlns=\"urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/\" " +

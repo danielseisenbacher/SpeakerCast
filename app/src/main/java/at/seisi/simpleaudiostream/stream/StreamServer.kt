@@ -68,6 +68,9 @@ class StreamServer {
                 socket.tcpNoDelay = true
                 out.write(responseHeaders().toByteArray())
                 out.write(WavFormat.streamingHeader())
+                // Sonos only answers Play once it has buffered enough; a live stream alone would take
+                // ~10 s to get there. A short burst of silence lets playback start immediately.
+                out.write(ByteArray(PRIME_BYTES))
                 out.flush()
 
                 val current = Listener(socket)
@@ -118,6 +121,7 @@ class StreamServer {
         const val PATH = "/stream.wav"
         private const val QUEUE_CHUNKS = 50 // 2 s
         private const val SILENCE_AFTER_MS = 200L
+        private const val PRIME_BYTES = WavFormat.BYTES_PER_SECOND // 1 s
         private val SILENCE = ByteArray(WavFormat.BYTES_PER_SECOND / 5) // 200 ms
 
         fun responseHeaders(): String =

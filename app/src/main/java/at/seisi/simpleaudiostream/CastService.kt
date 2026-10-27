@@ -48,6 +48,7 @@ import kotlinx.coroutines.withContext
 import java.io.IOException
 import java.net.DatagramSocket
 import java.net.InetAddress
+import java.net.SocketTimeoutException
 import kotlin.concurrent.thread
 
 /**
@@ -181,7 +182,12 @@ class CastService : Service() {
         val url = "http://$ip:${srv.port}${StreamServer.PATH}?session=${++streamCounter}"
         AppLog.i(TAG, "Playing $url on ${ctl.renderer.name}")
         ctl.setAvTransportUri(url, UpnpControl.streamMetadata(url, WavFormat.MIME_TYPE, getString(R.string.app_name)))
-        ctl.play()
+        try {
+            ctl.play()
+        } catch (e: SocketTimeoutException) {
+            // The speaker may still start; the watchdog retries if it doesn't.
+            AppLog.w(TAG, "Play timed out, continuing")
+        }
     }
 
     /** The phone's IP on the interface that routes to the speaker. */
