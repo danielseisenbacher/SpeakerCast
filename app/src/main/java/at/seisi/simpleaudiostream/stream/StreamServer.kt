@@ -6,16 +6,18 @@ import java.io.InputStream
 import java.net.ServerSocket
 import java.net.Socket
 import java.util.concurrent.ArrayBlockingQueue
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 
 /**
  * Tiny HTTP server that serves the live capture as an endless WAV stream at [PATH].
- * Only one listener at a time: a new request replaces the previous one.
+ * Every open connection gets the stream: Sonos sometimes opens two connections a few ms apart and
+ * keeps whichever it likes, so we must not guess. Connections it doesn't want are closed by Sonos.
  */
 class StreamServer {
     private val serverSocket = ServerSocket(0)
-    @Volatile private var listener: Listener? = null
+    private val listeners = CopyOnWriteArrayList<Listener>()
 
     val port: Int get() = serverSocket.localPort
 
@@ -34,13 +36,13 @@ class StreamServer {
 
     /** Called from the capture thread with each chunk of PCM. */
     fun push(chunk: ByteArray) {
-        listener?.offer(chunk)
+        for (l in listeners) l.offer(chunk)
     }
 
     fun stop() {
         runCatching { serverSocket.close() }
-        listener?.close()
-        listener = null
+        listeners.forEach { it.close() }
+        listeners.clear()
     }
 
     private fun handle(socket: Socket) {
@@ -66,16 +68,16 @@ class StreamServer {
                 }
                 socket.soTimeout = 0
                 socket.tcpNoDelay = true
+                val current = Listener(socket)
+                listeners += current
+                // Safety net against connections that are left open but never read.
+                while (listeners.size > MAX_LISTENERS) listeners.removeAt(0).close()
+
                 out.write(responseHeaders().toByteArray())
                 out.write(WavFormat.streamingHeader())
-                // Sonos only answers Play once it has buffered enough; a live stream alone would take
-                // ~10 s to get there. A short burst of silence lets playback start immediately.
+                // A small head start so the speaker doesn't have to wait for real-time audio to trickle in.
                 out.write(ByteArray(PRIME_BYTES))
                 out.flush()
-
-                val current = Listener(socket)
-                listener?.close()
-                listener = current
                 current.pump()
                 AppLog.i(TAG, "Stream to ${socket.inetAddress.hostAddress} ended")
             } catch (e: IOException) {
@@ -104,7 +106,7 @@ class StreamServer {
                     out.flush()
                 }
             } finally {
-                if (listener === this) listener = null
+                listeners.remove(this)
             }
         }
 
@@ -120,6 +122,7 @@ class StreamServer {
         private const val TAG = "StreamServer"
         const val PATH = "/stream.wav"
         private const val QUEUE_CHUNKS = 50 // 2 s
+        private const val MAX_LISTENERS = 4
         private const val SILENCE_AFTER_MS = 200L
         private const val PRIME_BYTES = WavFormat.BYTES_PER_SECOND // 1 s
         private val SILENCE = ByteArray(WavFormat.BYTES_PER_SECOND / 5) // 200 ms
