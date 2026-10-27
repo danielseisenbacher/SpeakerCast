@@ -21,7 +21,7 @@ One tap. No time limit. No speaker app needed.
 
 <br>
 
-Play anything on your phone (YouTube Music, Spotify, podcasts, videos) and hear it on your **Sonos** or any other **UPnP/DLNA** speaker. It's a small, free alternative to *Audio Cast* in BubbleUPnP, without the 15‑minute limit.
+Play anything on your phone (YouTube Music, Spotify, podcasts, videos) and hear it on your **Sonos** or any other **UPnP/DLNA** speaker.
 
 <table>
 <tr>

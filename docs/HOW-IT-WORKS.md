@@ -1,6 +1,6 @@
 # How SpeakerCast works
 
-SpeakerCast uses the same technique as BubbleUPnP's *Audio Cast*: it captures what other apps play, serves it from a tiny web server on the phone, and asks the speaker over UPnP to play that stream.
+SpeakerCast captures what other apps play, serves it from a tiny web server on the phone, and asks the speaker over UPnP to play that stream.
 
 ```
 Other apps' audio ──► AudioPlaybackCapture (needs MediaProjection = the "screen sharing" consent)
