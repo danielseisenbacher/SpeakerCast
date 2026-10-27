@@ -1,5 +1,6 @@
 package at.seisi.simpleaudiostream.upnp
 
+import at.seisi.simpleaudiostream.log.AppLog
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
@@ -21,6 +22,8 @@ object Soap {
 
     fun call(controlUrl: String, serviceType: String, action: String, vararg args: Pair<String, String>): String {
         val body = envelope(serviceType, action, args.toList()).toByteArray(Charsets.UTF_8)
+        // The watchdog polls these every few seconds; don't flood the log with them.
+        if (action !in QUIET_ACTIONS) AppLog.i("Soap", "$action ${args.joinToString { "${it.first}=${it.second.take(120)}" }}")
         val conn = URL(controlUrl).openConnection() as HttpURLConnection
         try {
             conn.connectTimeout = 4000
@@ -35,6 +38,7 @@ object Soap {
             val stream = if (code in 200..299) conn.inputStream else conn.errorStream
             val text = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
             if (code !in 200..299) {
+                AppLog.w("Soap", "$action -> HTTP $code: ${text.take(500)}")
                 throw UpnpException(action, code, value(text, "errorCode"), value(text, "errorDescription"))
             }
             return text
@@ -42,6 +46,8 @@ object Soap {
             conn.disconnect()
         }
     }
+
+    private val QUIET_ACTIONS = setOf("GetTransportInfo", "GetMediaInfo")
 
     /** Extracts the (unescaped) text of the first element named [tag], ignoring namespace prefixes. */
     fun value(xml: String, tag: String): String? =

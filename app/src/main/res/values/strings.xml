@@ -29,6 +29,9 @@
     <string name="mute_phone">Mute phone while casting</string>
     <string name="battery_hint">Allow running in background</string>
 
+    <string name="share_log">Share log for troubleshooting</string>
+    <string name="log_subject">SimpleAudioStream log</string>
+
     <string name="error_permission">Microphone/audio capture permission is required</string>
     <string name="error_not_found">%1$s not found on the network</string>
     <string name="error_projection">Screen/audio capture was not granted</string>

@@ -1,6 +1,6 @@
 package at.seisi.simpleaudiostream.stream
 
-import android.util.Log
+import at.seisi.simpleaudiostream.log.AppLog
 import java.io.IOException
 import java.io.InputStream
 import java.net.ServerSocket
@@ -48,7 +48,7 @@ class StreamServer {
             try {
                 socket.soTimeout = 5000
                 val request = readRequest(socket.getInputStream()) ?: return
-                Log.i(TAG, "${socket.inetAddress.hostAddress}: ${request.method} ${request.path}")
+                AppLog.i(TAG, "${socket.inetAddress.hostAddress}: ${request.method} ${request.path}")
                 val out = socket.getOutputStream()
                 when {
                     request.path != PATH -> {
@@ -74,8 +74,9 @@ class StreamServer {
                 listener?.close()
                 listener = current
                 current.pump()
+                AppLog.i(TAG, "Stream to ${socket.inetAddress.hostAddress} ended")
             } catch (e: IOException) {
-                Log.i(TAG, "client disconnected: ${e.message}")
+                AppLog.i(TAG, "client disconnected: ${e.message}")
             }
         }
     }

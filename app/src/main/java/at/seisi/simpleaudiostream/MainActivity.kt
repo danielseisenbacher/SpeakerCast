@@ -55,6 +55,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import at.seisi.simpleaudiostream.log.LogExport
 import at.seisi.simpleaudiostream.upnp.Renderer
 import at.seisi.simpleaudiostream.upnp.SsdpDiscovery
 import kotlinx.coroutines.launch
@@ -217,7 +218,7 @@ private fun MainScreen() {
                 Text(stringResource(R.string.no_speakers), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
 
-            LazyColumn {
+            LazyColumn(modifier = Modifier.weight(1f)) {
                 items(renderers, key = { it.udn }) { renderer ->
                     ListItem(
                         headlineContent = { Text(renderer.name) },
@@ -227,6 +228,11 @@ private fun MainScreen() {
                     )
                 }
             }
+
+            TextButton(
+                onClick = { scope.launch { LogExport.share(context) } },
+                modifier = Modifier.align(Alignment.CenterHorizontally),
+            ) { Text(stringResource(R.string.share_log)) }
         }
     }
 }

@@ -20,7 +20,7 @@ import android.os.Looper
 import android.os.PowerManager
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
-import android.util.Log
+import at.seisi.simpleaudiostream.log.AppLog
 import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
@@ -74,7 +74,10 @@ class CastService : Service() {
 
     private val projectionCallback = object : MediaProjection.Callback() {
         // Fired when the user revokes capture, e.g. from the status bar chip.
-        override fun onStop() = stopCasting(stopSpeaker = true)
+        override fun onStop() {
+            AppLog.i(TAG, "Capture permission revoked by the system/user")
+            stopCasting(stopSpeaker = true)
+        }
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -98,7 +101,10 @@ class CastService : Service() {
     }
 
     private fun start(intent: Intent) {
-        if (projection != null) return
+        if (projection != null) {
+            AppLog.i(TAG, "Start ignored, already casting")
+            return
+        }
         val renderer = Prefs(this).renderer
         speaker = renderer?.name.orEmpty()
         // Must be called promptly after startForegroundService(), even if we bail out below.
@@ -115,6 +121,7 @@ class CastService : Service() {
             fail(getString(R.string.error_permission))
             return
         }
+        AppLog.i(TAG, "Starting capture for ${renderer.name} (${renderer.location})")
         setStatus(CastState.Status.Connecting(speaker))
 
         val srv: StreamServer
@@ -128,6 +135,7 @@ class CastService : Service() {
             server = srv
             capture = CaptureEngine(mp, srv::push).also { it.start() }
         } catch (e: Exception) {
+            AppLog.e(TAG, "Could not start capture", e)
             fail(e.message ?: e.toString())
             return
         }
@@ -142,6 +150,7 @@ class CastService : Service() {
             control = ctl
             startPlayback(ctl, srv)
             val initialVolume = runCatching { ctl.volume() }.getOrNull()
+            AppLog.i(TAG, "Casting, speaker volume $initialVolume")
             withContext(Dispatchers.Main) { onCasting(initialVolume) }
             coroutineScope {
                 launch { volumeTarget.filterNotNull().collect { v -> runCatching { ctl.setVolume(v) } } }
@@ -150,14 +159,16 @@ class CastService : Service() {
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            Log.e(TAG, "Casting failed", e)
+            AppLog.e(TAG, "Casting failed", e)
             mainHandler.post { fail(e.message ?: e.toString()) }
         }
     }
 
     /** Uses the saved endpoints if they still answer, otherwise finds the speaker again by UDN (its IP may have changed). */
     private suspend fun resolve(saved: Renderer): Renderer {
-        if (runCatching { UpnpControl(saved).transportState() }.isSuccess) return saved
+        val check = runCatching { UpnpControl(saved).transportState() }
+        if (check.isSuccess) return saved
+        AppLog.w(TAG, "Saved speaker not reachable (${check.exceptionOrNull()?.message}), searching by UDN")
         val found = SsdpDiscovery.discover(this).firstOrNull { it.udn == saved.udn }
             ?: throw IOException(getString(R.string.error_not_found, saved.name))
         Prefs(this).renderer = found
@@ -168,7 +179,7 @@ class CastService : Service() {
         val ip = localAddressTowards(ctl.renderer.host)
         // A fresh query string per attempt makes the speaker reconnect instead of reusing a dead stream.
         val url = "http://$ip:${srv.port}${StreamServer.PATH}?session=${++streamCounter}"
-        Log.i(TAG, "Playing $url on ${ctl.renderer.name}")
+        AppLog.i(TAG, "Playing $url on ${ctl.renderer.name}")
         ctl.setAvTransportUri(url, UpnpControl.streamMetadata(url, WavFormat.MIME_TYPE, getString(R.string.app_name)))
         ctl.play()
     }
@@ -184,6 +195,7 @@ class CastService : Service() {
     /** Auto-reconnect: if the speaker stops playing our stream (Wi-Fi hiccup etc.), start it again. */
     private suspend fun watchdog(ctl: UpnpControl, srv: StreamServer) {
         val ours = ":${srv.port}${StreamServer.PATH}"
+        var lastState: String? = null
         while (true) {
             delay(WATCHDOG_INTERVAL_MS)
             val state: String?
@@ -192,22 +204,26 @@ class CastService : Service() {
                 state = ctl.transportState()
                 uri = ctl.currentUri()
             } catch (e: IOException) {
-                Log.w(TAG, "Speaker not reachable: ${e.message}")
+                AppLog.w(TAG, "Speaker not reachable: ${e.message}")
                 continue
             }
+            if (state != lastState) {
+                AppLog.i(TAG, "Speaker state: $state, uri: $uri")
+                lastState = state
+            }
             if (!uri.isNullOrEmpty() && !uri.contains(ours)) {
-                Log.i(TAG, "Speaker switched to another source ($uri), ending session")
+                AppLog.i(TAG, "Speaker switched to another source ($uri), ending session")
                 mainHandler.post { stopCasting(stopSpeaker = false) }
                 return
             }
             if (state == "STOPPED" || state == "NO_MEDIA_PRESENT") {
-                Log.i(TAG, "Speaker is $state, restarting stream")
+                AppLog.i(TAG, "Speaker is $state, restarting stream")
                 mainHandler.post { updateNotification(getString(R.string.notification_reconnecting, speaker)) }
                 try {
                     startPlayback(ctl, srv)
                     mainHandler.post { updateNotification(getString(R.string.notification_casting, speaker)) }
                 } catch (e: IOException) {
-                    Log.w(TAG, "Reconnect failed: ${e.message}")
+                    AppLog.w(TAG, "Reconnect failed: ${e.message}")
                 }
             }
         }
@@ -255,6 +271,7 @@ class CastService : Service() {
     }
 
     private fun stopCasting(stopSpeaker: Boolean) {
+        if (projection != null) AppLog.i(TAG, "Stopping (stopSpeaker=$stopSpeaker)")
         session?.cancel()
         session = null
         val ctl = control
@@ -282,7 +299,7 @@ class CastService : Service() {
     }
 
     private fun fail(message: String) {
-        Log.e(TAG, message)
+        AppLog.e(TAG, "Failed: $message")
         stopCasting(stopSpeaker = false)
         setStatus(CastState.Status.Error(message))
         Toast.makeText(this, message, Toast.LENGTH_LONG).show()

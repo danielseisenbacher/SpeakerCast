@@ -10,6 +10,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
+import at.seisi.simpleaudiostream.log.AppLog
 
 /**
  * Invisible activity that asks Android for capture permission (the "start recording or casting"
@@ -19,6 +20,7 @@ class ConsentActivity : ComponentActivity() {
     private val projectionLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             val data = result.data
+            AppLog.i("Consent", "Capture consent result=${result.resultCode}, data=${data != null}")
             if (result.resultCode == RESULT_OK && data != null) {
                 CastService.start(this, result.resultCode, data)
             } else {

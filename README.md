@@ -43,6 +43,16 @@ Speaker  ──► HTTP GET /stream.wav  (endless WAV stream)
 - **The phone keeps playing.** Android doesn't mute the phone while capturing. You can enable *Mute phone while casting*. If the speaker goes silent with that switch on, your device mutes the captured audio as well, so turn the switch off and lower the phone volume instead.
 - **Grouped Sonos speakers:** cast to the group coordinator.
 
+## Problems? Send a log
+
+Open the app and tap **Share log for troubleshooting** at the bottom. This creates a text file containing:
+- the phone model and Android version
+- the selected speaker
+- the app's own log, which keeps the last ~1 MB across restarts and records crashes
+- the app's system log lines
+
+Attach that file to a [GitHub issue](../../issues), or send it however you prefer. The log contains no personal data beyond your speaker's name and its local IP address.
+
 ## Building
 
 Every push is built by GitHub Actions (`.github/workflows/build.yml`), and tags `v*` publish a release with the APK. To build locally you need the Android SDK:

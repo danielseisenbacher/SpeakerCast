@@ -2,6 +2,7 @@ package at.seisi.simpleaudiostream.upnp
 
 import android.content.Context
 import android.net.wifi.WifiManager
+import at.seisi.simpleaudiostream.log.AppLog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -33,10 +34,21 @@ object SsdpDiscovery {
             } finally {
                 lock.release()
             }
-            coroutineScope {
-                locations.map { async { runCatching { DeviceDescription.fetch(it) }.getOrNull() } }
-                    .awaitAll()
+            val renderers = coroutineScope {
+                locations.map { location ->
+                    async {
+                        runCatching { DeviceDescription.fetch(location) }
+                            .onFailure { AppLog.w("Discovery", "Could not read $location: $it") }
+                            .getOrNull()
+                    }
+                }.awaitAll()
             }.filterNotNull().distinctBy { it.udn }.sortedBy { it.name.lowercase() }
+            AppLog.i(
+                "Discovery",
+                "${locations.size} devices answered, renderers: " +
+                    renderers.joinToString { "${it.name} (${it.model}, ${it.location})" },
+            )
+            renderers
         }
 
     private fun collectLocations(timeoutMs: Long): Set<String> {
