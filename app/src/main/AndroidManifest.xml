@@ -12,21 +12,13 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
-    <!-- Lets the "Audio from" picker list launchable apps. -->
-    <queries>
-        <intent>
-            <action android:name="android.intent.action.MAIN" />
-            <category android:name="android.intent.category.LAUNCHER" />
-        </intent>
-    </queries>
-
     <application
-        android:name=".SimpleAudioStreamApp"
+        android:name=".SpeakerCastApp"
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
-        android:theme="@style/Theme.SimpleAudioStream"
+        android:theme="@style/Theme.SpeakerCast"
         android:usesCleartextTraffic="true">
 
         <activity
@@ -48,7 +40,7 @@
             android:excludeFromRecents="true"
             android:exported="false"
             android:taskAffinity=""
-            android:theme="@style/Theme.SimpleAudioStream.Transparent" />
+            android:theme="@style/Theme.SpeakerCast.Transparent" />
 
         <service
             android:name=".CastService"
@@ -58,7 +50,7 @@
         <service
             android:name=".CastTileService"
             android:exported="true"
-            android:icon="@drawable/ic_speaker"
+            android:icon="@drawable/ic_cast_audio"
             android:label="@string/tile_label"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter>

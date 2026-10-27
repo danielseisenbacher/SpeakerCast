@@ -47,12 +47,12 @@ jobs:
         run: ./gradlew --no-daemon testDebugUnitTest lintDebug assembleRelease
 
       - name: Rename APK
-        run: cp app/build/outputs/apk/release/app-release.apk "SimpleAudioStream-${VERSION_NAME}.apk"
+        run: cp app/build/outputs/apk/release/app-release.apk "SpeakerCast-${VERSION_NAME}.apk"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: SimpleAudioStream-${{ env.VERSION_NAME }}
-          path: SimpleAudioStream-*.apk
+          name: SpeakerCast-${{ env.VERSION_NAME }}
+          path: SpeakerCast-*.apk
 
       - name: Upload lint report
         if: failure()
@@ -66,5 +66,5 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: SimpleAudioStream-*.apk
+          files: SpeakerCast-*.apk
           generate_release_notes: true

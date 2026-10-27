@@ -33,11 +33,11 @@ object LogExport {
         val dir = File(context.cacheDir, "logs").apply { mkdirs() }
         dir.listFiles()?.forEach { it.delete() }
         val stamp = SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(Date())
-        val file = File(dir, "simpleaudiostream-log-$stamp.txt")
+        val file = File(dir, "speakercast-log-$stamp.txt")
         val info = context.packageManager.getPackageInfo(context.packageName, 0)
         val renderer = Prefs(context).renderer
         file.bufferedWriter().use { out ->
-            out.appendLine("SimpleAudioStream ${info.versionName}")
+            out.appendLine("SpeakerCast ${info.versionName}")
             out.appendLine("Device: ${Build.MANUFACTURER} ${Build.MODEL}, Android ${Build.VERSION.RELEASE} (SDK ${Build.VERSION.SDK_INT})")
             out.appendLine("Speaker: ${renderer?.let { "${it.name} (${it.model}) ${it.location}" } ?: "none"}")
             out.appendLine("Status: ${CastState.status.value}")

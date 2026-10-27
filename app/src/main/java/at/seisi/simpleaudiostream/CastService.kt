@@ -6,10 +6,8 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
-import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.media.AudioManager
@@ -89,21 +87,6 @@ class CastService : Service() {
         }
     }
 
-    /** If a volume key still changed the phone's media volume, pass it on to the speaker and mute the phone again. */
-    private val phoneVolumeReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) {
-            if (intent.getIntExtra(EXTRA_VOLUME_STREAM_TYPE, -1) != AudioManager.STREAM_MUSIC) return
-            val value = intent.getIntExtra(EXTRA_VOLUME_STREAM_VALUE, 0)
-            val previous = intent.getIntExtra(EXTRA_PREV_VOLUME_STREAM_VALUE, 0)
-            if (value == 0 || value == previous) return // our own reset to 0
-            AppLog.i(TAG, "Phone media volume changed $previous -> $value while casting, redirecting to speaker")
-            changeVolume((value - previous) * VOLUME_STEP)
-            getSystemService(AudioManager::class.java).setStreamVolume(AudioManager.STREAM_MUSIC, 0, 0)
-            mainHandler.removeCallbacks(reclaimVolumeKeys)
-            reclaimVolumeKeys.run()
-        }
-    }
-
     private val projectionCallback = object : MediaProjection.Callback() {
         // Fired when the user revokes capture, e.g. from the status bar chip.
         override fun onStop() {
@@ -153,17 +136,7 @@ class CastService : Service() {
             fail(getString(R.string.error_permission))
             return
         }
-        val captureApp = Prefs(this).captureApp
-        val captureUid = captureApp?.let { pkg ->
-            runCatching { packageManager.getApplicationInfo(pkg, 0).uid }
-                .onFailure { AppLog.w(TAG, "App $pkg not found, capturing all apps") }
-                .getOrNull()
-        }
-        AppLog.i(
-            TAG,
-            "Starting capture for ${renderer.name} (${renderer.location}), " +
-                "audio from ${if (captureUid != null) "$captureApp (uid $captureUid)" else "all apps"}",
-        )
+        AppLog.i(TAG, "Starting capture for ${renderer.name} (${renderer.location})")
         setStatus(CastState.Status.Connecting(speaker))
 
         val srv: StreamServer
@@ -175,7 +148,7 @@ class CastService : Service() {
             mp.registerCallback(projectionCallback, mainHandler)
             srv = StreamServer().also { it.start() }
             server = srv
-            capture = CaptureEngine(mp, captureUid, srv::push).also { it.start() }
+            capture = CaptureEngine(mp, srv::push).also { it.start() }
         } catch (e: Exception) {
             AppLog.e(TAG, "Could not start capture", e)
             fail(e.message ?: e.toString())
@@ -286,9 +259,6 @@ class CastService : Service() {
         if (volume != null) {
             setupMediaSession(volume)
             mainHandler.postDelayed(reclaimVolumeKeys, RECLAIM_VOLUME_KEYS_MS)
-            ContextCompat.registerReceiver(
-                this, phoneVolumeReceiver, IntentFilter(VOLUME_CHANGED_ACTION), ContextCompat.RECEIVER_NOT_EXPORTED,
-            )
         }
     }
 
@@ -313,7 +283,7 @@ class CastService : Service() {
             }
         }
         volumeProvider = provider
-        mediaSession = MediaSessionCompat(this, "SimpleAudioStream").apply {
+        mediaSession = MediaSessionCompat(this, "SpeakerCast").apply {
             setPlaybackToRemote(provider)
             setPlaybackState(playbackState(PlaybackStateCompat.STATE_PLAYING))
             isActive = true
@@ -350,7 +320,6 @@ class CastService : Service() {
         }
         projection = null
         mainHandler.removeCallbacks(reclaimVolumeKeys)
-        if (mediaSession != null) runCatching { unregisterReceiver(phoneVolumeReceiver) }
         mediaSession?.release()
         mediaSession = null
         volumeProvider = null
@@ -375,7 +344,10 @@ class CastService : Service() {
         CastTileService.refresh(this)
     }
 
-    /** The speaker plays the audio, so silence the phone. Capture is unaffected by the phone's volume. */
+    /**
+     * The speaker plays the audio, so start with the phone silent. Capture is unaffected by the phone's
+     * volume, and the user may turn the phone up again at any time.
+     */
     private fun mutePhone() {
         val audio = getSystemService(AudioManager::class.java)
         savedPhoneVolume = audio.getStreamVolume(AudioManager.STREAM_MUSIC)
@@ -394,7 +366,7 @@ class CastService : Service() {
 
     private fun acquireLocks() {
         wakeLock = getSystemService(PowerManager::class.java)
-            .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "SimpleAudioStream:cast")
+            .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "SpeakerCast:cast")
             .apply {
                 setReferenceCounted(false)
                 acquire()
@@ -403,7 +375,7 @@ class CastService : Service() {
         @Suppress("DEPRECATION")
         val modes = listOf(WifiManager.WIFI_MODE_FULL_HIGH_PERF, WifiManager.WIFI_MODE_FULL_LOW_LATENCY)
         for (mode in modes) {
-            wifiLocks += wifi.createWifiLock(mode, "SimpleAudioStream:cast:$mode").apply {
+            wifiLocks += wifi.createWifiLock(mode, "SpeakerCast:cast:$mode").apply {
                 setReferenceCounted(false)
                 acquire()
             }
@@ -426,7 +398,7 @@ class CastService : Service() {
             this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE,
         )
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_speaker)
+            .setSmallIcon(R.drawable.ic_cast_audio)
             .setContentTitle(title)
             .setContentIntent(open)
             .setOngoing(true)
@@ -458,11 +430,6 @@ class CastService : Service() {
         private const val WATCHDOG_INTERVAL_MS = 10_000L
         private const val RECLAIM_VOLUME_KEYS_MS = 3_000L
 
-        // Sent by the system on every stream volume change (long-standing, but not in the public SDK).
-        private const val VOLUME_CHANGED_ACTION = "android.media.VOLUME_CHANGED_ACTION"
-        private const val EXTRA_VOLUME_STREAM_TYPE = "android.media.EXTRA_VOLUME_STREAM_TYPE"
-        private const val EXTRA_VOLUME_STREAM_VALUE = "android.media.EXTRA_VOLUME_STREAM_VALUE"
-        private const val EXTRA_PREV_VOLUME_STREAM_VALUE = "android.media.EXTRA_PREV_VOLUME_STREAM_VALUE"
 
         private const val ACTION_START = "at.seisi.simpleaudiostream.START"
         private const val ACTION_STOP = "at.seisi.simpleaudiostream.STOP"

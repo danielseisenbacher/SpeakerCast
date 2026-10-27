@@ -13,5 +13,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "SimpleAudioStream"
+rootProject.name = "SpeakerCast"
 include(":app")

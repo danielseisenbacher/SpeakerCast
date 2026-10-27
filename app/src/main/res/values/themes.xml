@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.SimpleAudioStream" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.SpeakerCast" parent="android:Theme.Material.Light.NoActionBar" />
 
-    <style name="Theme.SimpleAudioStream.Transparent" parent="android:Theme.Translucent.NoTitleBar">
+    <style name="Theme.SpeakerCast.Transparent" parent="android:Theme.Translucent.NoTitleBar">
         <item name="android:windowIsTranslucent">true</item>
         <item name="android:windowBackground">@android:color/transparent</item>
         <item name="android:windowNoTitle">true</item>

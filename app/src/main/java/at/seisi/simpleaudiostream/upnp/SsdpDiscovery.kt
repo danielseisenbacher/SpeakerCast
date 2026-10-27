@@ -25,7 +25,7 @@ object SsdpDiscovery {
     suspend fun discover(context: Context, timeoutMs: Long = 3000): List<Renderer> =
         withContext(Dispatchers.IO) {
             val wifi = context.applicationContext.getSystemService(WifiManager::class.java)
-            val lock = wifi.createMulticastLock("SimpleAudioStream:ssdp").apply {
+            val lock = wifi.createMulticastLock("SpeakerCast:ssdp").apply {
                 setReferenceCounted(false)
                 acquire()
             }

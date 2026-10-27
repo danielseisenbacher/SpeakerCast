@@ -152,7 +152,7 @@ class StreamServer {
                 "Connection: close\r\n" +
                 "transferMode.dlna.org: Streaming\r\n" +
                 "contentFeatures.dlna.org: DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=01700000000000000000000000000000\r\n" +
-                "Server: SimpleAudioStream\r\n\r\n"
+                "Server: SpeakerCast\r\n\r\n"
 
         /** Reads the request line and headers; returns null on a malformed or oversized request. */
         fun readRequest(input: InputStream): Request? {

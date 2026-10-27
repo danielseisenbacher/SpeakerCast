@@ -12,26 +12,22 @@ import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
 
 /**
- * Captures what other apps play (Android 10+ AudioPlaybackCapture) as 16-bit stereo PCM,
- * either from all apps or only from the app with [onlyUid]. The caller must hold RECORD_AUDIO.
+ * Captures what other apps play (Android 10+ AudioPlaybackCapture) as 16-bit stereo PCM.
+ * The caller must hold RECORD_AUDIO.
  */
 @SuppressLint("MissingPermission")
-class CaptureEngine(projection: MediaProjection, onlyUid: Int?, private val sink: (ByteArray) -> Unit) {
+class CaptureEngine(projection: MediaProjection, private val sink: (ByteArray) -> Unit) {
     private val record: AudioRecord
     @Volatile private var running = false
     private var worker: Thread? = null
     private val peak = AtomicInteger(0)
 
     init {
-        val config = AudioPlaybackCaptureConfiguration.Builder(projection).apply {
-            if (onlyUid != null) {
-                addMatchingUid(onlyUid)
-            } else {
-                addMatchingUsage(AudioAttributes.USAGE_MEDIA)
-                addMatchingUsage(AudioAttributes.USAGE_GAME)
-                addMatchingUsage(AudioAttributes.USAGE_UNKNOWN)
-            }
-        }.build()
+        val config = AudioPlaybackCaptureConfiguration.Builder(projection)
+            .addMatchingUsage(AudioAttributes.USAGE_MEDIA)
+            .addMatchingUsage(AudioAttributes.USAGE_GAME)
+            .addMatchingUsage(AudioAttributes.USAGE_UNKNOWN)
+            .build()
         val format = AudioFormat.Builder()
             .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
             .setSampleRate(WavFormat.SAMPLE_RATE)
