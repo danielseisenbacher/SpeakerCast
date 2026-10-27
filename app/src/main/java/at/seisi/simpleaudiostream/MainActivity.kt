@@ -195,10 +195,10 @@ private fun MainScreen() {
     LaunchedEffect(Unit) { scan() }
 
     val colors = MaterialTheme.colorScheme
+    Surface(color = colors.surface, contentColor = colors.onSurface, modifier = Modifier.fillMaxSize()) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(colors.surface)
             .background(Brush.verticalGradient(listOf(colors.primaryContainer.copy(alpha = 0.6f), colors.surface))),
     ) {
         Column(
@@ -310,6 +310,7 @@ private fun MainScreen() {
             }
         }
     }
+    }
 }
 
 /** The big round cast button with the speaker name and status underneath. */
@@ -319,7 +320,7 @@ private fun CastHero(status: CastState.Status, speaker: String?, onClick: () -> 
     val casting = status is CastState.Status.Casting
     val connecting = status is CastState.Status.Connecting
     val idleColor by animateColorAsState(
-        if (casting) Color.Transparent else colors.surfaceContainerHighest, label = "button",
+        if (casting) Color.Transparent else colors.primaryContainer, label = "button",
     )
 
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = modifier) {
@@ -351,7 +352,7 @@ private fun CastHero(status: CastState.Status, speaker: String?, onClick: () -> 
                         Icon(
                             painterResource(if (casting) R.drawable.ic_stop else R.drawable.ic_cast_audio),
                             contentDescription = stringResource(if (casting || connecting) R.string.button_stop else R.string.button_cast),
-                            tint = if (casting) Color.White else colors.primary,
+                            tint = if (casting) Color.White else colors.onPrimaryContainer,
                             modifier = Modifier.size(if (casting) 48.dp else 64.dp),
                         )
                     }
